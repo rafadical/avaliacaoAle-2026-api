@@ -1,0 +1,88 @@
+name: cursos-api
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: tcc_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - tcc_public
+      - tcc_internal
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: tcc_app
+    restart: unless-stopped
+    env_file:
+      - ./app/.env
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tcc_internal
+    # NOTA: nao expoe portas no host — apenas Nginx fala com a aplicacao
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: tcc_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cursos_db}
+      POSTGRES_USER: ${DB_USER:-cursos_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cursos_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cursos_user} -d ${DB_NAME:-cursos_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tcc_internal
+    # NOTA: nao expoe portas no host — banco fica isolado na rede interna
+
+  redis:
+    image: redis:7-alpine
+    container_name: tcc_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tcc_internal
+
+networks:
+  # Rede publica: apenas o Nginx tem acesso externo
+  tcc_public:
+    driver: bridge
+    name: tcc_public
+
+  # Rede interna isolada: app + postgres + redis (sem acesso externo)
+  tcc_internal:
+    driver: bridge
+    name: tcc_internal
+    internal: false  # mantem false pra app conseguir baixar dependencias durante build inicial
+
+volumes:
+  postgres_data:
+    name: tcc_postgres_data
+  redis_data:
+    name: tcc_redis_data

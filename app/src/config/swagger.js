@@ -134,15 +134,15 @@ const definition = {
                 responses: { 200: { description: 'OK' } },
             },
         },
-        ...gerarRotasCRUD('usuarios', 'Usuario'),
-        ...gerarRotasCRUD('categorias', 'Categoria'),
-        ...gerarRotasCRUD('cursos', 'Curso'),
-        ...gerarRotasCRUD('matriculas', 'Matricula'),
-        ...gerarRotasCRUD('avaliacoes', 'Avaliacao'),
+        ...gerarRotasCRUD('usuarios', 'Usuario', 'usuario'),
+        ...gerarRotasCRUD('categorias', 'Categoria', 'categoria'),
+        ...gerarRotasCRUD('cursos', 'Curso', 'curso'),
+        ...gerarRotasCRUD('matriculas', 'Matricula', 'matricula'),
+        ...gerarRotasCRUD('avaliacoes', 'Avaliacao', 'avaliacao'),
     },
 }
 
-function gerarRotasCRUD(recurso, schema) {
+function gerarRotasCRUD(recurso, schema, singular) {
     const tag = recurso.charAt(0).toUpperCase() + recurso.slice(1)
     return {
         [`/${recurso}`]: {
@@ -157,7 +157,7 @@ function gerarRotasCRUD(recurso, schema) {
             },
             post: {
                 tags: [tag],
-                summary: `Cria ${recurso.slice(0, -1)}`,
+                summary: `Cria ${singular}`,
                 requestBody: {
                     required: true,
                     content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } },
@@ -168,13 +168,13 @@ function gerarRotasCRUD(recurso, schema) {
         [`/${recurso}/{id}`]: {
             get: {
                 tags: [tag],
-                summary: `Busca ${recurso.slice(0, -1)} por id`,
+                summary: `Busca ${singular} por id`,
                 parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
                 responses: { 200: { description: 'OK' }, 404: { description: 'Não encontrado' } },
             },
             put: {
                 tags: [tag],
-                summary: `Atualiza ${recurso.slice(0, -1)}`,
+                summary: `Atualiza ${singular}`,
                 parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
                 requestBody: {
                     required: true,
@@ -184,7 +184,7 @@ function gerarRotasCRUD(recurso, schema) {
             },
             delete: {
                 tags: [tag],
-                summary: `Remove ${recurso.slice(0, -1)}`,
+                summary: `Remove ${singular}`,
                 parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
                 responses: { 204: { description: 'Removido' }, 404: { description: 'Não encontrado' } },
             },

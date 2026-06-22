@@ -27,24 +27,48 @@ Não é necessário instalar Node.js, PostgreSQL ou Redis na máquina — tudo r
 
 ## Como rodar
 
+Passo a passo completo. O projeto sobe sem configuração extra — os valores padrão já estão no `docker-compose.yml`.
+
 ```bash
 git clone https://github.com/rafadical/avaliacaoAle-2026-api.git
 cd avaliacaoAle-2026-api
-
-cp .env.example .env
-cp app/.env.example app/.env
+docker compose up --build
 ```
 
-Subir com o script de deploy (recomendado):
+Em outro terminal, rode as migrations e o seed:
 
 ```bash
-bash deploy.sh --seed
+docker compose exec app node command.js migrate
+docker compose exec app node command.js seed
 ```
 
-Ou manualmente:
+Pronto. A API responde em `http://localhost` e a documentação em `http://localhost/api-docs`.
+
+Para subir em segundo plano, use `docker compose up --build -d`. O script `bash deploy.sh --seed` faz tudo (subir + migrate + seed) em um comando.
+
+## Login e uso do token JWT
+
+Todas as rotas exigem token JWT, exceto `POST /login`. Primeiro faça login para obter o token:
 
 ```bash
-docker compose up --build -d
+curl -X POST http://localhost/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@cursos.com","senha":"admin123"}'
+```
+
+A resposta traz `{ "token": "...", "usuario": {...} }`. Use o token no cabeçalho `Authorization` das demais rotas:
+
+```bash
+curl http://localhost/cursos -H "Authorization: Bearer SEU_TOKEN_AQUI"
+```
+
+Sem o token, a API responde `401 Token nao fornecido`.
+
+## Migrations pelo command
+
+O entrypoint CLI é o `command.js`. Para criar as tabelas e popular o banco:
+
+```bash
 docker compose exec app node command.js migrate
 docker compose exec app node command.js seed
 ```
@@ -65,20 +89,19 @@ Duas redes custom bridge: `cursos_public` (só o Nginx) e `cursos_internal` (Ngi
 
 **Segurança**
 
-As credenciais ficam no `.env` que não vai para o repositório. O container da aplicação roda com usuário não-root. O banco e o Redis estão na rede interna e são inacessíveis diretamente pelo host.
+As credenciais podem ser sobrescritas por um `.env` que não vai para o repositório. O container da aplicação roda com usuário não-root. O banco e o Redis estão na rede interna e são inacessíveis diretamente pelo host.
 
 ## Gestão de Segredos
 
-As variáveis de ambiente ficam em dois arquivos `.env` que **não são versionados**. Copie os templates antes de subir:
+O `docker-compose.yml` já traz valores padrão para desenvolvimento, então o projeto sobe sem nenhum arquivo `.env`. Para usar credenciais próprias, crie um `.env` na raiz a partir do modelo:
 
 ```bash
 cp .env.example .env
-cp app/.env.example app/.env
 ```
 
-O `.env` na raiz define as credenciais do PostgreSQL usadas pelo `docker-compose.yml`. O `app/.env` define a configuração da aplicação Node (host do banco, JWT secret, etc.).
+Esse `.env` sobrescreve as senhas do PostgreSQL e o segredo do JWT tanto para o banco quanto para a aplicação. Há também o `app/.env.example` para quem quiser rodar o Node fora do Docker.
 
-**Nunca commite senhas reais no repositório.** Os arquivos `.env` estão no `.gitignore`.
+**Nunca commite senhas reais no repositório.** Os arquivos `.env` estão no `.gitignore` — só os modelos `.env.example` vão para o repositório.
 
 ## Evidências e Validação
 

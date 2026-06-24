@@ -141,7 +141,7 @@ Swagger: `http://localhost/api-docs`
 
 ## Troubleshooting e Limpeza
 
-Se o app não subir, veja `docker compose logs app`. O erro mais comum é senha divergente no `.env` — rode `docker compose down -v` e suba de novo.
+Se o app não subir, veja `docker compose logs app`. Em caso de estado inconsistente do banco, rode `docker compose down -v` e suba de novo para começar do zero.
 
 Se a porta 80 estiver ocupada, troque `"80:80"` por `"8080:80"` no `docker-compose.yml`.
 

@@ -72,7 +72,8 @@ function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) 
 module.exports = async function seed() {
     console.log('[seed] iniciando carga inicial...')
 
-    await sequelize.sync({ force: false })
+    // O schema e criado pelas migrations (node command.js migrate).
+    // O seed apenas popula os dados — nao define schema.
 
     // ---- Limpar tabelas (na ordem inversa das FKs) ----
     await Avaliacao.destroy({ where: {} })

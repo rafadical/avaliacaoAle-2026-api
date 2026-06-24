@@ -64,6 +64,8 @@ curl http://localhost/cursos -H "Authorization: Bearer SEU_TOKEN_AQUI"
 
 Sem o token, a API responde `401 Token nao fornecido`.
 
+As rotas de leitura (`GET`) ficam disponíveis para qualquer usuário autenticado. Já as escritas administrativas — criar, editar e remover `usuarios`, `categorias` e `cursos` — exigem um usuário do tipo `admin`; um `aluno` recebe `403`. Matrículas e avaliações podem ser criadas pelo próprio usuário autenticado.
+
 ## Migrations pelo command
 
 O entrypoint CLI é o `command.js`. Para criar as tabelas e popular o banco:
@@ -89,7 +91,11 @@ Duas redes custom bridge: `cursos_public` (só o Nginx) e `cursos_internal` (Ngi
 
 **Segurança**
 
-As credenciais podem ser sobrescritas por um `.env` que não vai para o repositório. O container da aplicação roda com usuário não-root. O banco e o Redis estão na rede interna e são inacessíveis diretamente pelo host.
+As credenciais podem ser sobrescritas por um `.env` que não vai para o repositório. O `JWT_SECRET` não é versionado: se não for definido no ambiente, a aplicação gera um segredo aleatório por sessão. O container da aplicação roda com usuário não-root. O banco e o Redis estão na rede interna e são inacessíveis diretamente pelo host. As rotas administrativas são protegidas por verificação de papel (`admin`).
+
+**Cache**
+
+O Redis é usado como cache das listagens (`GET /<entidade>`), com expiração de 30 segundos e invalidação automática a cada escrita. O cabeçalho `X-Cache: HIT/MISS` indica se a resposta veio do cache.
 
 ## Gestão de Segredos
 
@@ -132,6 +138,14 @@ Test-NetConnection localhost -Port 5432 -InformationLevel Quiet
 O retorno `False` no PowerShell significa que a porta está fechada — que é o esperado.
 
 Swagger: `http://localhost/api-docs`
+
+## Testes
+
+Há testes de fumaça cobrindo health, login/JWT, proteção de rota e autorização. Com o ambiente no ar:
+
+```bash
+docker compose exec -e BASE_URL=http://localhost:3000 app npm test
+```
 
 ## Documentação por disciplina
 

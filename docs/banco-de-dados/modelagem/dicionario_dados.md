@@ -14,7 +14,7 @@ Cadastro de usuários da plataforma (alunos e administradores).
 | created_at   | TIMESTAMPTZ     | NÃO  | CURRENT_TIMESTAMP  |                             | Data de criação. |
 | updated_at   | TIMESTAMPTZ     | NÃO  | CURRENT_TIMESTAMP  |                             | Última atualização. |
 
-**Índices:** `usuarios_email_uniq (UNIQUE)`, `usuarios_tipo_idx`.
+**Índices:** `usuarios_email_key (UNIQUE)`, `usuarios_tipo_idx`.
 
 ---
 
@@ -30,7 +30,7 @@ Categorização dos cursos.
 | created_at | TIMESTAMPTZ     | NÃO  | CURRENT_TIMESTAMP |             | Criação. |
 | updated_at | TIMESTAMPTZ     | NÃO  | CURRENT_TIMESTAMP |             | Atualização. |
 
-**Índices:** `categorias_nome_uniq (UNIQUE)`.
+**Índices:** `categorias_nome_key (UNIQUE)`.
 
 ---
 
@@ -95,9 +95,9 @@ Notas e comentários dos alunos sobre os cursos.
 
 | Tabela | Índice | Tipo | Motivo |
 |--------|--------|------|--------|
-| usuarios | `usuarios_email_uniq` | B-Tree UNIQUE | Login (busca por email é o caminho crítico). |
+| usuarios | `usuarios_email_key` | B-Tree UNIQUE | Login (busca por email é o caminho crítico). |
 | usuarios | `usuarios_tipo_idx` | B-Tree | Filtro por tipo (ex: listar admins). |
-| categorias | `categorias_nome_uniq` | B-Tree UNIQUE | Evita duplicatas + busca por nome. |
+| categorias | `categorias_nome_key` | B-Tree UNIQUE | Evita duplicatas + busca por nome. |
 | cursos | `cursos_categoria_idx` | B-Tree | JOIN com categorias é frequente. |
 | cursos | `cursos_titulo_idx` | B-Tree | Buscas por título (autocomplete, filtros). |
 | cursos | `cursos_ativo_idx` | B-Tree | Listar apenas cursos ativos. |

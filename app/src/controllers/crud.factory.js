@@ -1,8 +1,22 @@
+const redis = require('../config/redis')
+
+const CACHE_TTL = 30 // segundos
+
 module.exports = function crudFactory(Model, options = {}) {
     const include = options.include || []
     const attributes = options.attributes // permite { exclude: ['senha'] }
     const onCreatePayload = options.onCreatePayload || ((req) => req.body)
     const onUpdatePayload = options.onUpdatePayload || ((req) => req.body)
+
+    // invalida o cache de listagem deste recurso (chamado apos escrita)
+    async function invalidarCache() {
+        try {
+            const keys = await redis.keys(`${Model.name}:list:*`)
+            if (keys.length) await redis.del(keys)
+        } catch (_) {
+            /* se o Redis estiver indisponivel, segue sem cache */
+        }
+    }
 
     return {
         async list(req, res, next) {
@@ -10,6 +24,19 @@ module.exports = function crudFactory(Model, options = {}) {
                 const page = Math.max(parseInt(req.query.page || '1', 10), 1)
                 const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100)
                 const offset = (page - 1) * limit
+
+                const cacheKey = `${Model.name}:list:${page}:${limit}`
+
+                // tenta servir do cache (Redis)
+                try {
+                    const cached = await redis.get(cacheKey)
+                    if (cached) {
+                        res.set('X-Cache', 'HIT')
+                        return res.json(JSON.parse(cached))
+                    }
+                } catch (_) {
+                    /* Redis indisponivel: cai para o banco */
+                }
 
                 const { rows, count } = await Model.findAndCountAll({
                     include,
@@ -20,7 +47,7 @@ module.exports = function crudFactory(Model, options = {}) {
                     distinct: true, // evita inflar o count quando ha JOIN
                 })
 
-                return res.json({
+                const payload = {
                     dados: rows,
                     paginacao: {
                         pagina: page,
@@ -28,7 +55,17 @@ module.exports = function crudFactory(Model, options = {}) {
                         total: count,
                         total_paginas: Math.ceil(count / limit),
                     },
-                })
+                }
+
+                // grava no cache com expiracao
+                try {
+                    await redis.set(cacheKey, JSON.stringify(payload), 'EX', CACHE_TTL)
+                } catch (_) {
+                    /* Redis indisponivel: responde sem cachear */
+                }
+
+                res.set('X-Cache', 'MISS')
+                return res.json(payload)
             } catch (err) {
                 next(err)
             }
@@ -48,6 +85,7 @@ module.exports = function crudFactory(Model, options = {}) {
             try {
                 const payload = onCreatePayload(req)
                 const novo = await Model.create(payload)
+                await invalidarCache()
                 return res.status(201).json(novo)
             } catch (err) {
                 next(err)
@@ -60,6 +98,7 @@ module.exports = function crudFactory(Model, options = {}) {
                 if (!item) return res.status(404).json({ erro: 'Registro nao encontrado' })
                 const payload = onUpdatePayload(req)
                 await item.update(payload)
+                await invalidarCache()
                 return res.json(item)
             } catch (err) {
                 next(err)
@@ -71,6 +110,7 @@ module.exports = function crudFactory(Model, options = {}) {
                 const item = await Model.findByPk(req.params.id)
                 if (!item) return res.status(404).json({ erro: 'Registro nao encontrado' })
                 await item.destroy()
+                await invalidarCache()
                 return res.status(204).end()
             } catch (err) {
                 next(err)

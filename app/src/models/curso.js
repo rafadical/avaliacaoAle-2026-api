@@ -44,11 +44,6 @@ module.exports = (sequelize) => {
             tableName: 'cursos',
             underscored: true,
             timestamps: true,
-            indexes: [
-                { fields: ['categoria_id'] },
-                { fields: ['titulo'] },
-                { fields: ['ativo'] },
-            ],
         }
     )
 }

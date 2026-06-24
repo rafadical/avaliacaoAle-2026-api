@@ -40,13 +40,6 @@ module.exports = (sequelize) => {
             tableName: 'matriculas',
             underscored: true,
             timestamps: true,
-            indexes: [
-                { fields: ['usuario_id'] },
-                { fields: ['curso_id'] },
-                { fields: ['usuario_id', 'curso_id'], unique: true, name: 'uniq_matricula_usuario_curso' },
-                { fields: ['status'] },
-                { fields: ['data_matricula'] },
-            ],
         }
     )
 }

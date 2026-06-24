@@ -30,7 +30,7 @@ services:
       DB_NAME: ${DB_NAME:-cursos_db}
       DB_USER: ${DB_USER:-cursos_user}
       DB_PASSWORD: ${DB_PASSWORD:-cursos_pass}
-      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
+      JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       REDIS_HOST: redis
       REDIS_PORT: 6379

@@ -55,7 +55,8 @@ async function migrate() {
         console.log(`[up]   ${migration.name}`)
         await sequelize.transaction(async (t) => {
             await migration.up(queryInterface, Sequelize, { transaction: t })
-            await sequelize.query(`INSERT INTO _migrations (name) VALUES ('${migration.name}')`, {
+            await sequelize.query('INSERT INTO _migrations (name) VALUES ($1)', {
+                bind: [migration.name],
                 transaction: t,
             })
         })
@@ -80,7 +81,8 @@ async function migrateUndo() {
     console.log(`[down] ${migration.name}`)
     await sequelize.transaction(async (t) => {
         await migration.down(queryInterface, require('sequelize').Sequelize, { transaction: t })
-        await sequelize.query(`DELETE FROM _migrations WHERE name = '${migration.name}'`, {
+        await sequelize.query('DELETE FROM _migrations WHERE name = $1', {
+            bind: [migration.name],
             transaction: t,
         })
     })

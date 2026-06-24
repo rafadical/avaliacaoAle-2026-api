@@ -9,7 +9,7 @@ module.exports = {
             created_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },
             updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },
         })
-        await queryInterface.addIndex('categorias', ['nome'], { unique: true, name: 'categorias_nome_uniq' })
+        // nome ja e UNIQUE pela definicao da coluna (gera indice unico automaticamente)
     },
 
     async down(queryInterface) {

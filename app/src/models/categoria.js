@@ -24,7 +24,6 @@ module.exports = (sequelize) => {
             tableName: 'categorias',
             underscored: true,
             timestamps: true,
-            indexes: [{ fields: ['nome'], unique: true }],
         }
     )
 }

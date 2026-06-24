@@ -36,10 +36,6 @@ module.exports = (sequelize) => {
             tableName: 'usuarios',
             underscored: true,
             timestamps: true,
-            indexes: [
-                { fields: ['email'], unique: true },
-                { fields: ['tipo'] },
-            ],
             hooks: {
                 beforeCreate: async (usuario) => {
                     if (usuario.senha) {

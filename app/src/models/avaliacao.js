@@ -33,12 +33,20 @@ module.exports = (sequelize) => {
             tableName: 'avaliacoes',
             underscored: true,
             timestamps: true,
-            indexes: [
-                { fields: ['usuario_id'] },
-                { fields: ['curso_id'] },
-                { fields: ['usuario_id', 'curso_id'], unique: true, name: 'uniq_avaliacao_usuario_curso' },
-                { fields: ['nota'] },
-            ],
+            hooks: {
+                // regra de negocio: so pode avaliar quem esta matriculado no curso
+                beforeCreate: async (avaliacao) => {
+                    const { Matricula } = require('./index')
+                    const matricula = await Matricula.findOne({
+                        where: { usuario_id: avaliacao.usuario_id, curso_id: avaliacao.curso_id },
+                    })
+                    if (!matricula) {
+                        const err = new Error('Usuario nao matriculado neste curso nao pode avalia-lo')
+                        err.status = 400
+                        throw err
+                    }
+                },
+            },
         }
     )
 }

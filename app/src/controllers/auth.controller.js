@@ -31,4 +31,17 @@ async function login(req, res, next) {
     }
 }
 
-module.exports = { login }
+async function registrar(req, res, next) {
+    try {
+        const { nome, email, senha } = req.body
+        if (!nome || !email || !senha) {
+            return res.status(400).json({ erro: 'nome, email e senha sao obrigatorios' })
+        }
+        const novo = await Usuario.create({ nome, email, senha, tipo: 'aluno' })
+        return res.status(201).json(novo.toJSON())
+    } catch (err) {
+        next(err)
+    }
+}
+
+module.exports = { login, registrar }

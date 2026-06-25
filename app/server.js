@@ -10,6 +10,7 @@ const errorHandler = require('./src/middlewares/error.middleware')
 const { sequelize } = require('./src/models')
 
 const app = express()
+app.set('trust proxy', 1)
 const PORT = parseInt(process.env.PORT || '3000', 10)
 
 const HOSTNAME = os.hostname()

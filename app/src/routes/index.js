@@ -4,12 +4,16 @@ const { sequelize, Usuario, Categoria, Curso, Matricula, Avaliacao } = require('
 const crudFactory = require('../controllers/crud.factory')
 const auth = require('../controllers/auth.controller')
 const redis = require('../config/redis')
-const { matriculasBeforeCreate, avaliacoesBeforeCreate } = require('../controllers/hooks.business')
+const { matriculasBeforeCreate, avaliacoesBeforeCreate, forcarDono } = require('../controllers/hooks.business')
+const rateLimit = require('../middlewares/rateLimit.middleware')
 
 const router = express.Router()
 
+const limiteAuth = rateLimit({ janelaMs: 60000, max: 50 })
+
 // rotas publicas
-router.post('/login', auth.login)
+router.post('/login', limiteAuth, auth.login)
+router.post('/register', limiteAuth, auth.registrar)
 
 // readiness: reporta banco e cache. O banco precisa estar migrado (tabela existe).
 router.get('/health', async (req, res) => {
@@ -74,7 +78,7 @@ const matriculasCRUD = crudFactory(Matricula, {
         { model: Curso, as: 'curso' },
     ],
     onCreatePayload: matriculasBeforeCreate,
-    onUpdatePayload: matriculasBeforeCreate,
+    onUpdatePayload: forcarDono,
 })
 router.get('/matriculas', matriculasCRUD.list)
 router.get('/matriculas/:id', matriculasCRUD.get)
@@ -90,7 +94,7 @@ const avaliacoesCRUD = crudFactory(Avaliacao, {
         { model: Curso, as: 'curso' },
     ],
     onCreatePayload: avaliacoesBeforeCreate,
-    onUpdatePayload: avaliacoesBeforeCreate,
+    onUpdatePayload: forcarDono,
 })
 router.get('/avaliacoes', avaliacoesCRUD.list)
 router.get('/avaliacoes/:id', avaliacoesCRUD.get)

@@ -10,7 +10,8 @@ module.exports = function errorHandler(err, req, res, next) {
     }
 
     if (err.name === 'SequelizeForeignKeyConstraintError') {
-        return res.status(400).json({ erro: 'Referencia invalida em chave estrangeira' })
+        const campo = err.index || err.fields?.[0] || 'chave estrangeira'
+        return res.status(400).json({ erro: `Referencia invalida: ${campo} aponta para um registro que nao existe` })
     }
 
     console.error('[error]', err)

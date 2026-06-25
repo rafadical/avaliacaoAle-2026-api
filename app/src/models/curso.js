@@ -17,6 +17,7 @@ module.exports = (sequelize) => {
             descricao: {
                 type: DataTypes.TEXT,
                 allowNull: true,
+                validate: { len: [0, 5000] },
             },
             carga_horaria: {
                 type: DataTypes.INTEGER,

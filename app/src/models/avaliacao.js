@@ -27,6 +27,7 @@ module.exports = (sequelize) => {
             comentario: {
                 type: DataTypes.TEXT,
                 allowNull: true,
+                validate: { len: [0, 2000] },
             },
         },
         {

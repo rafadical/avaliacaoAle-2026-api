@@ -52,8 +52,16 @@ async function avaliacoesBeforeCreate(req) {
     return body
 }
 
+// no update apenas garante que o dono nao seja trocado; nao reseta progresso/status
+function forcarDono(req) {
+    const body = { ...req.body }
+    if (req.usuario.tipo !== 'admin') body.usuario_id = req.usuario.id
+    return body
+}
+
 module.exports = {
     RegraNegocioError,
     matriculasBeforeCreate,
     avaliacoesBeforeCreate,
+    forcarDono,
 }

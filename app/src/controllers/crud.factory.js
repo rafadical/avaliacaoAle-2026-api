@@ -1,6 +1,13 @@
 const redis = require('../config/redis')
 
-const CACHE_TTL = 30 // segundos
+const CACHE_TTL = 30
+const PROTEGIDOS = ['id', 'created_at', 'updated_at', 'createdAt', 'updatedAt']
+
+function semCamposProtegidos(payload) {
+    const limpo = { ...payload }
+    for (const campo of PROTEGIDOS) delete limpo[campo]
+    return limpo
+}
 
 module.exports = function crudFactory(Model, options = {}) {
     const include = options.include || []
@@ -13,9 +20,14 @@ module.exports = function crudFactory(Model, options = {}) {
     // versao atual do cache deste recurso (compoe a chave de listagem)
     async function getVersion() {
         try {
-            return (await redis.get(versionKey)) || '0'
+            let v = await redis.get(versionKey)
+            if (!v) {
+                v = String(Date.now())
+                await redis.set(versionKey, v)
+            }
+            return v
         } catch (_) {
-            return '0'
+            return String(Date.now())
         }
     }
 
@@ -32,8 +44,8 @@ module.exports = function crudFactory(Model, options = {}) {
     return {
         async list(req, res, next) {
             try {
-                const page = Math.max(parseInt(req.query.page || '1', 10), 1)
-                const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100)
+                const page = Math.min(Math.max(parseInt(req.query.page || '1', 10) || 1, 1), 10000)
+                const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10) || 20, 1), 100)
                 const offset = (page - 1) * limit
 
                 const ver = await getVersion()
@@ -95,7 +107,7 @@ module.exports = function crudFactory(Model, options = {}) {
 
         async create(req, res, next) {
             try {
-                const payload = await onCreatePayload(req)
+                const payload = semCamposProtegidos(await onCreatePayload(req))
                 const novo = await Model.create(payload)
                 await invalidarCache()
                 return res.status(201).json(novo)
@@ -108,7 +120,7 @@ module.exports = function crudFactory(Model, options = {}) {
             try {
                 const item = await Model.findByPk(req.params.id)
                 if (!item) return res.status(404).json({ erro: 'Registro nao encontrado' })
-                const payload = await onUpdatePayload(req)
+                const payload = semCamposProtegidos(await onUpdatePayload(req))
                 await item.update(payload)
                 await invalidarCache()
                 return res.json(item)

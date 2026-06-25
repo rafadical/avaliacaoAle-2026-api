@@ -95,7 +95,7 @@ module.exports = function crudFactory(Model, options = {}) {
 
         async create(req, res, next) {
             try {
-                const payload = onCreatePayload(req)
+                const payload = await onCreatePayload(req)
                 const novo = await Model.create(payload)
                 await invalidarCache()
                 return res.status(201).json(novo)
@@ -108,7 +108,7 @@ module.exports = function crudFactory(Model, options = {}) {
             try {
                 const item = await Model.findByPk(req.params.id)
                 if (!item) return res.status(404).json({ erro: 'Registro nao encontrado' })
-                const payload = onUpdatePayload(req)
+                const payload = await onUpdatePayload(req)
                 await item.update(payload)
                 await invalidarCache()
                 return res.json(item)

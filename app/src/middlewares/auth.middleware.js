@@ -24,4 +24,24 @@ function exigirAdmin(req, res, next) {
     return next()
 }
 
-module.exports = { autenticarJWT, exigirAdmin }
+// garante que o usuario logado e o dono do registro (campo usuario_id) ou e admin.
+// usado em PUT/DELETE de matriculas e avaliacoes para um aluno nao mexer no de outro.
+function exigirDonoOuAdmin(Model, campoUsuarioId = 'usuario_id') {
+    return async function (req, res, next) {
+        try {
+            if (req.usuario && req.usuario.tipo === 'admin') return next()
+
+            const item = await Model.findByPk(req.params.id)
+            if (!item) return res.status(404).json({ erro: 'Registro nao encontrado' })
+
+            if (item[campoUsuarioId] !== req.usuario.id) {
+                return res.status(403).json({ erro: 'Voce so pode alterar seus proprios registros' })
+            }
+            return next()
+        } catch (err) {
+            return next(err)
+        }
+    }
+}
+
+module.exports = { autenticarJWT, exigirAdmin, exigirDonoOuAdmin }

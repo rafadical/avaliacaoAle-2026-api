@@ -16,6 +16,8 @@ const sequelize = new Sequelize(
             acquire: 30000,
             idle: 10000,
         },
+        retry: { max: 3 },
+        dialectOptions: { connectTimeout: 10000 },
     }
 )
 

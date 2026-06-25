@@ -16,6 +16,12 @@ const PORT = parseInt(process.env.PORT || '3000', 10)
 const HOSTNAME = os.hostname()
 
 // Middlewares globais
+app.use((req, res, next) => {
+    res.setTimeout(20000, () => {
+        if (!res.headersSent) res.status(503).json({ erro: 'Tempo de resposta excedido' })
+    })
+    next()
+})
 app.use(express.json({ limit: '1mb' }))
 app.use((req, res, next) => {
     res.set('X-Served-By', HOSTNAME)

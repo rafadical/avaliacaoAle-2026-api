@@ -95,14 +95,28 @@ async function seed() {
     await seed()
 }
 
+// Popula o banco apenas se ainda nao houver usuarios.
+// Usado no boot para nao apagar dados existentes em reinicializacoes.
+async function seedIfEmpty() {
+    const [rows] = await sequelize.query('SELECT COUNT(*)::int AS total FROM usuarios')
+    const total = rows[0].total
+    if (total > 0) {
+        console.log(`[seed] ${total} usuario(s) ja existem; pulando seed.`)
+        return
+    }
+    console.log('[seed] banco vazio; populando dados iniciais...')
+    await seed()
+}
+
 async function main() {
     const cmd = process.argv[2]
     try {
         if (cmd === 'migrate') await migrate()
         else if (cmd === 'migrate:undo') await migrateUndo()
         else if (cmd === 'seed') await seed()
+        else if (cmd === 'seed:if-empty') await seedIfEmpty()
         else {
-            console.error('comandos disponiveis: migrate | migrate:undo | seed')
+            console.error('comandos disponiveis: migrate | migrate:undo | seed | seed:if-empty')
             process.exit(1)
         }
     } catch (err) {

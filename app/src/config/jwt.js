@@ -1,17 +1,16 @@
-const crypto = require('node:crypto')
-
-// Valor publico que ja esteve versionado: nunca deve ser usado como segredo real.
-const DEV_DEFAULT = 'troque-este-segredo-em-producao'
+// Segredo de desenvolvimento. NAO e um segredo de producao: serve apenas para o
+// projeto subir e funcionar localmente. Em producao, defina JWT_SECRET no .env
+// (que nao vai para o repositorio) para sobrescrever este valor.
+const DEV_FALLBACK = 'dev-secret-local-defina-JWT_SECRET-no-env-em-producao'
 
 const fromEnv = process.env.JWT_SECRET
 
-// Usa o segredo do ambiente se for um valor proprio.
-// Caso contrario gera um segredo aleatorio desta sessao (nao fica no repositorio).
-const JWT_SECRET =
-    fromEnv && fromEnv !== DEV_DEFAULT ? fromEnv : crypto.randomBytes(32).toString('hex')
+// Estavel entre reinicializacoes e entre replicas: usa o valor do ambiente se
+// houver; caso contrario, o fallback fixo de desenvolvimento.
+const JWT_SECRET = fromEnv && fromEnv.trim() !== '' ? fromEnv : DEV_FALLBACK
 
-if (!fromEnv || fromEnv === DEV_DEFAULT) {
-    console.warn('[jwt] JWT_SECRET nao definido no ambiente; usando segredo aleatorio desta sessao.')
+if (JWT_SECRET === DEV_FALLBACK) {
+    console.warn('[jwt] usando segredo de desenvolvimento; defina JWT_SECRET no .env para producao.')
 }
 
 module.exports = {

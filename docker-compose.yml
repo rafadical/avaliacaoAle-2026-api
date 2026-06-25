@@ -1,9 +1,22 @@
 name: cursos-api
 
+# Variaveis de ambiente compartilhadas entre o app e o servico de migracao.
+x-app-env: &app-env
+  NODE_ENV: production
+  PORT: 3000
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_NAME: ${DB_NAME:-cursos_db}
+  DB_USER: ${DB_USER:-cursos_user}
+  DB_PASSWORD: ${DB_PASSWORD:-cursos_pass}
+  JWT_SECRET: ${JWT_SECRET:-}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+
 services:
   nginx:
     image: nginx:1.27-alpine
-    container_name: cursos_nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -16,35 +29,39 @@ services:
       - cursos_public
       - cursos_internal
 
+  # Servico one-shot: cria as tabelas e popula na primeira subida.
+  # Roda uma vez e encerra; o app so inicia depois que ele termina com sucesso.
+  migrate:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    environment: *app-env
+    command: ["sh", "-c", "node command.js migrate && node command.js seed:if-empty"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cursos_internal
+    restart: "no"
+
   app:
     build:
       context: ./app
       dockerfile: Dockerfile
-    container_name: cursos_app
     restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-cursos_db}
-      DB_USER: ${DB_USER:-cursos_user}
-      DB_PASSWORD: ${DB_PASSWORD:-cursos_pass}
-      JWT_SECRET: ${JWT_SECRET:-}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+    environment: *app-env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - cursos_internal
 
   postgres:
     image: postgres:17-alpine
-    container_name: cursos_postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-cursos_db}
@@ -62,7 +79,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: cursos_redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     volumes:

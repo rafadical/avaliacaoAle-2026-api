@@ -134,16 +134,23 @@ const definition = {
                 responses: { 200: { description: 'OK' } },
             },
         },
-        ...gerarRotasCRUD('usuarios', 'Usuario', 'usuario'),
-        ...gerarRotasCRUD('categorias', 'Categoria', 'categoria'),
-        ...gerarRotasCRUD('cursos', 'Curso', 'curso'),
+        ...gerarRotasCRUD('usuarios', 'Usuario', 'usuario', { adminOnly: true }),
+        ...gerarRotasCRUD('categorias', 'Categoria', 'categoria', { adminOnly: true }),
+        ...gerarRotasCRUD('cursos', 'Curso', 'curso', { adminOnly: true }),
         ...gerarRotasCRUD('matriculas', 'Matricula', 'matricula'),
-        ...gerarRotasCRUD('avaliacoes', 'Avaliacao', 'avaliacao'),
+        ...gerarRotasCRUD('avaliacoes', 'Avaliacao', 'avaliacao', { regraNegocio: true }),
     },
 }
 
-function gerarRotasCRUD(recurso, schema, singular) {
+function gerarRotasCRUD(recurso, schema, singular, opts = {}) {
     const tag = recurso.charAt(0).toUpperCase() + recurso.slice(1)
+    const adminNote = opts.adminOnly ? ' (escrita exige usuario admin)' : ''
+    const escrita403 = opts.adminOnly ? { 403: { description: 'Acesso restrito a administradores' } } : {}
+    // avaliacoes: regra de negocio retorna 400 (precisa de matricula ativa em curso ativo)
+    const regra400 = opts.regraNegocio
+        ? { 400: { description: 'Validação ou regra de negócio (ex: sem matrícula ativa)' } }
+        : { 400: { description: 'Erro de validação' } }
+
     return {
         [`/${recurso}`]: {
             get: {
@@ -157,12 +164,12 @@ function gerarRotasCRUD(recurso, schema, singular) {
             },
             post: {
                 tags: [tag],
-                summary: `Cria ${singular}`,
+                summary: `Cria ${singular}${adminNote}`,
                 requestBody: {
                     required: true,
                     content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } },
                 },
-                responses: { 201: { description: 'Criado' }, 400: { description: 'Erro de validação' } },
+                responses: { 201: { description: 'Criado' }, ...regra400, ...escrita403 },
             },
         },
         [`/${recurso}/{id}`]: {
@@ -174,19 +181,19 @@ function gerarRotasCRUD(recurso, schema, singular) {
             },
             put: {
                 tags: [tag],
-                summary: `Atualiza ${singular}`,
+                summary: `Atualiza ${singular}${adminNote}`,
                 parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
                 requestBody: {
                     required: true,
                     content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } },
                 },
-                responses: { 200: { description: 'OK' }, 404: { description: 'Não encontrado' } },
+                responses: { 200: { description: 'OK' }, ...regra400, ...escrita403, 404: { description: 'Não encontrado' } },
             },
             delete: {
                 tags: [tag],
-                summary: `Remove ${singular}`,
+                summary: `Remove ${singular}${adminNote}`,
                 parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
-                responses: { 204: { description: 'Removido' }, 404: { description: 'Não encontrado' } },
+                responses: { 204: { description: 'Removido' }, ...escrita403, 404: { description: 'Não encontrado' } },
             },
         },
     }

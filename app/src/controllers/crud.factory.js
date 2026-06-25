@@ -8,11 +8,22 @@ module.exports = function crudFactory(Model, options = {}) {
     const onCreatePayload = options.onCreatePayload || ((req) => req.body)
     const onUpdatePayload = options.onUpdatePayload || ((req) => req.body)
 
-    // invalida o cache de listagem deste recurso (chamado apos escrita)
+    const versionKey = `${Model.name}:listver`
+
+    // versao atual do cache deste recurso (compoe a chave de listagem)
+    async function getVersion() {
+        try {
+            return (await redis.get(versionKey)) || '0'
+        } catch (_) {
+            return '0'
+        }
+    }
+
+    // invalida todas as listagens incrementando a versao (O(1), sem KEYS).
+    // As chaves da versao antiga deixam de ser consultadas e expiram pelo TTL.
     async function invalidarCache() {
         try {
-            const keys = await redis.keys(`${Model.name}:list:*`)
-            if (keys.length) await redis.del(keys)
+            await redis.incr(versionKey)
         } catch (_) {
             /* se o Redis estiver indisponivel, segue sem cache */
         }
@@ -25,7 +36,8 @@ module.exports = function crudFactory(Model, options = {}) {
                 const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100)
                 const offset = (page - 1) * limit
 
-                const cacheKey = `${Model.name}:list:${page}:${limit}`
+                const ver = await getVersion()
+                const cacheKey = `${Model.name}:list:v${ver}:${page}:${limit}`
 
                 // tenta servir do cache (Redis)
                 try {

@@ -27,7 +27,7 @@ Não é necessário instalar Node.js, PostgreSQL ou Redis na máquina — tudo r
 
 ## Como rodar
 
-Passo a passo completo. O projeto sobe sem configuração extra — os valores padrão já estão no `docker-compose.yml`.
+Um único comando. As migrations e a carga inicial de dados rodam automaticamente na primeira subida (serviço `migrate`), então não há passo manual.
 
 ```bash
 git clone https://github.com/rafadical/avaliacaoAle-2026-api.git
@@ -35,16 +35,20 @@ cd avaliacaoAle-2026-api
 docker compose up --build
 ```
 
-Em outro terminal, rode as migrations e o seed:
+Pronto. A API responde em `http://localhost` e a documentação em `http://localhost/api-docs`. As credenciais do admin (`admin@cursos.com` / `admin123`) já estão disponíveis.
 
-```bash
-docker compose exec app node command.js migrate
-docker compose exec app node command.js seed
-```
+Para subir em segundo plano, use `docker compose up --build -d`.
 
-Pronto. A API responde em `http://localhost` e a documentação em `http://localhost/api-docs`.
+### Como funciona a inicialização
 
-Para subir em segundo plano, use `docker compose up --build -d`. O script `bash deploy.sh --seed` faz tudo (subir + migrate + seed) em um comando.
+O serviço `migrate` sobe antes do `app`, roda as migrations e popula o banco apenas se ele estiver vazio (`seed:if-empty`). O `app` só inicia depois que esse serviço termina com sucesso (`depends_on: service_completed_successfully`). Em reinicializações, o seed é pulado e os dados são preservados.
+
+### Entrypoints
+
+A aplicação tem dois entrypoints, na raiz do projeto Node (pasta `app/`, que é a raiz `/app` dentro do container):
+
+- `server.js` — servidor web (HTTP/Express).
+- `command.js` — comandos de linha de comando (`migrate`, `seed`, `seed:if-empty`).
 
 ## Login e uso do token JWT
 
@@ -68,11 +72,12 @@ As rotas de leitura (`GET`) ficam disponíveis para qualquer usuário autenticad
 
 ## Migrations pelo command
 
-O entrypoint CLI é o `command.js`. Para criar as tabelas e popular o banco:
+As migrations rodam automaticamente na subida (serviço `migrate`). Mas o entrypoint CLI `command.js` também permite rodá-las manualmente:
 
 ```bash
-docker compose exec app node command.js migrate
-docker compose exec app node command.js seed
+docker compose exec app node command.js migrate        # cria/atualiza as tabelas
+docker compose exec app node command.js seed           # repopula (apaga e recria os dados)
+docker compose exec app node command.js seed:if-empty  # popula só se o banco estiver vazio
 ```
 
 ## Detalhamento Técnico
@@ -88,6 +93,8 @@ Os dados do PostgreSQL ficam no volume nomeado `cursos_postgres_data` e os do Re
 **Rede e Comunicação**
 
 Duas redes custom bridge: `cursos_public` (só o Nginx) e `cursos_internal` (Nginx, app, postgres e redis). O app, o banco e o Redis não têm portas mapeadas no host. A comunicação entre containers é feita pelo nome do serviço (`postgres:5432`, `redis:6379`), sem IPs fixos.
+
+Os serviços não usam `container_name` fixo, então o serviço `app` pode ser escalado com `docker compose up -d --scale app=3` sem conflito de nomes. Observação honesta: o `upstream app:3000` do Nginx resolve o DNS na carga da config, então o balanceamento real entre réplicas exigiria um `resolver` dinâmico (ou um load balancer de cluster, como no Swarm). Para o escopo single-host desta entrega, roda uma instância; a estrutura já não impede a escala.
 
 **Segurança**
 

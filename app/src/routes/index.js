@@ -10,10 +10,11 @@ const router = express.Router()
 router.post('/login', auth.login)
 router.get('/health', async (req, res) => {
     try {
-        await sequelize.authenticate()
+        // readiness: nao basta conectar; as tabelas precisam existir (migrations rodaram)
+        await sequelize.query('SELECT 1 FROM usuarios LIMIT 1')
         return res.json({ status: 'ok', uptime: process.uptime() })
     } catch (err) {
-        return res.status(503).json({ status: 'unhealthy', erro: 'banco indisponivel' })
+        return res.status(503).json({ status: 'unhealthy', erro: 'banco indisponivel ou nao migrado' })
     }
 })
 
@@ -56,6 +57,9 @@ const matriculasCRUD = crudFactory(Matricula, {
         { model: Usuario, as: 'usuario', attributes: { exclude: ['senha'] } },
         { model: Curso, as: 'curso' },
     ],
+    // o dono e sempre o usuario autenticado (impede agir em nome de outro)
+    onCreatePayload: (req) => ({ ...req.body, usuario_id: req.usuario.id }),
+    onUpdatePayload: (req) => ({ ...req.body, usuario_id: req.usuario.id }),
 })
 router.get('/matriculas', matriculasCRUD.list)
 router.get('/matriculas/:id', matriculasCRUD.get)
@@ -69,6 +73,9 @@ const avaliacoesCRUD = crudFactory(Avaliacao, {
         { model: Usuario, as: 'usuario', attributes: { exclude: ['senha'] } },
         { model: Curso, as: 'curso' },
     ],
+    // o autor e sempre o usuario autenticado (impede avaliar em nome de outro)
+    onCreatePayload: (req) => ({ ...req.body, usuario_id: req.usuario.id }),
+    onUpdatePayload: (req) => ({ ...req.body, usuario_id: req.usuario.id }),
 })
 router.get('/avaliacoes', avaliacoesCRUD.list)
 router.get('/avaliacoes/:id', avaliacoesCRUD.get)

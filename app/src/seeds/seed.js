@@ -159,9 +159,9 @@ module.exports = async function seed() {
         matriculasCriadas++
     }
 
-    // ---- AVALIACOES (60, apenas de quem ja se matriculou) ----
+    // ---- AVALIACOES (60, apenas de matriculas nao canceladas) ----
     console.log('[seed] criando 60 avaliacoes...')
-    const matriculas = await Matricula.findAll()
+    const matriculas = (await Matricula.findAll()).filter((m) => m.status !== 'cancelada')
     const avaliacaoSet = new Set()
     let avaliacoesCriadas = 0
     let tentativas = 0

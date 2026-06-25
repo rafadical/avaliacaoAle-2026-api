@@ -34,14 +34,23 @@ module.exports = (sequelize) => {
             underscored: true,
             timestamps: true,
             hooks: {
-                // regra de negocio: so pode avaliar quem esta matriculado no curso
-                beforeCreate: async (avaliacao) => {
-                    const { Matricula } = require('./index')
+                // regra de negocio (vale para create e update):
+                // so pode avaliar curso ativo no qual o usuario tem matricula nao cancelada.
+                beforeSave: async (avaliacao) => {
+                    const { Matricula, Curso } = require('./index')
+
+                    const curso = await Curso.findByPk(avaliacao.curso_id)
+                    if (!curso || curso.ativo !== true) {
+                        const err = new Error('Curso inexistente ou inativo nao pode ser avaliado')
+                        err.status = 400
+                        throw err
+                    }
+
                     const matricula = await Matricula.findOne({
                         where: { usuario_id: avaliacao.usuario_id, curso_id: avaliacao.curso_id },
                     })
-                    if (!matricula) {
-                        const err = new Error('Usuario nao matriculado neste curso nao pode avalia-lo')
+                    if (!matricula || matricula.status === 'cancelada') {
+                        const err = new Error('Avaliacao exige matricula ativa neste curso')
                         err.status = 400
                         throw err
                     }
